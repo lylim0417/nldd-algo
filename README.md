@@ -33,7 +33,7 @@ This unified perspective positions NLDD as a **comprehensive diagnostic tool** f
 
 ## Mathematical Formulation
 
-Given a dataset \($$\{(x_i, y_i)\}_{i=1}^{n}$$\), a linear regression model is fitted:
+Given a dataset $$\(\{(x_i, y_i)\}_{i=1}^{n}\)$$, a linear regression model is fitted:
 
 $$
 \hat{y}_i = \beta_0 + \beta_1 x_i
@@ -66,7 +66,7 @@ $$
 \mathrm{NLDD}(X,Y) = \tilde{s}
 $$
 
-where \( $$\tilde{s} $$\) represents the normalized standard deviation of dependent differences scaled to the range \([0,1]\).
+where $$\( \tilde{s} \)$$ represents the normalized standard deviation of dependent differences scaled to the range $$\([0,1]\)$$.
 
 A value of NLDD close to 0 indicates strong linearity and homoskedasticity, while larger values reflect increasing structural deviation, variance instability, or the presence of outliers.
 
