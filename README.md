@@ -6,7 +6,7 @@ This repository provides an implementation of the **Normalized Least Dependent D
 
 NLDD operates by quantifying the **dependent difference** between observed and predicted values derived from a fitted linear regression model. By analyzing the dispersion of these differences, the method captures both structural conformity and variance stability of the data.
 
-Unlike conventional approaches that separately evaluate structural relationships and variance assumptions, NLDD integrates these aspects through a **normalized dispersion measure**, enabling a holistic and interpretable assessment of data behavior. The framework further incorporates an **iterative refinement mechanism** to improve robustness against anomalous observations and progressively stabilize the regression model.
+Unlike conventional approaches that separately evaluate structural relationships and variance assumptions, NLDD integrates these aspects through a **range-normalized dispersion measure of dependent differences**, enabling a holistic and interpretable assessment of data behavior. The framework further incorporates an **iterative refinement mechanism** to improve robustness against anomalous observations and progressively stabilize the regression model.
 
 This unified perspective positions NLDD as a **comprehensive diagnostic tool** for evaluating regression validity under complex data conditions.
 
@@ -20,8 +20,8 @@ This unified perspective positions NLDD as a **comprehensive diagnostic tool** f
 - **Dependent Difference Formulation**  
   Introduces a novel metric based on the absolute deviation between observed and predicted values, integrating concepts from Mean Absolute Error (MAE) and Mean Absolute Deviation (MAD).
 
-- **Normalized Dispersion Measure**  
-  Utilizes the standard deviation of dependent differences and scales it into a normalized range, enabling consistent interpretation across datasets.
+- **Range-Normalized Dispersion Measure**  
+  Utilizes the standard deviation of dependent differences and normalizes it using the response range $$\((\max(y) - \min(y))\)$$, enabling consistent interpretation across datasets.
 
 - **Iterative Outlier Refinement Mechanism**  
   Incorporates a dynamic, threshold-based process to detect and remove anomalous observations, improving regression reliability.
@@ -33,42 +33,45 @@ This unified perspective positions NLDD as a **comprehensive diagnostic tool** f
 
 ## Mathematical Formulation
 
-Given a dataset $$\(\{(x_i, y_i)\}_{i=1}^{n}\)$$, a linear regression model is fitted:
+Given a dataset $$\( M = \{(x_i, y_i)\}_{i=1}^{n} \)$$, a linear regression model is first fitted:
 
 $$
-\hat{y}_i = \beta_0 + \beta_1 x_i
+\hat{y}_i = \beta x_i + \hat{\epsilon}
 $$
 
 The dependent difference is defined as:
 
 $$
-\Delta y_i = \left| y_i - \hat{y}_i \right|
+\Delta Y_i = \left| \hat{y}_i - y_i \right|
+$$
+
+Let the collection of dependent differences be:
+
+$$
+C(\Delta Y) = \{\Delta Y_1, \Delta Y_2, \dots, \Delta Y_n\}
 $$
 
 The mean dependent difference is:
 
 $$
-\overline{\Delta y} = \frac{1}{n} \sum_{i=1}^{n} \Delta y_i
+\overline{\Delta Y} = \frac{1}{n} \sum_{i=1}^{n} \Delta Y_i
 $$
 
-The dispersion of dependent differences is measured using:
+The dispersion of dependent differences is measured using the standard deviation:
 
 $$
 s = \sqrt{
-\frac{1}{n} \sum_{i=1}^{n}
-\left( \Delta y_i - \overline{\Delta y} \right)^2
+\frac{\sum_{i=1}^{n} \left( \Delta Y_i - \overline{\Delta Y} \right)^2}{n - 1}
 }
 $$
 
-The NLDD score is defined as the normalized dispersion:
+The Normalized Least Dependent Difference (NLDD) is defined as:
 
 $$
-\mathrm{NLDD}(X,Y) = \tilde{s}
+s_{\mathrm{NLDD}} = \frac{s}{\max(y) - \min(y)}
 $$
 
-where $$\( \tilde{s} \)$$ represents the normalized standard deviation of dependent differences scaled to the range $$\([0,1]\)$$.
-
-A value of NLDD close to 0 indicates strong linearity and homoskedasticity, while larger values reflect increasing structural deviation, variance instability, or the presence of outliers.
+A value of $$\( s_{\mathrm{NLDD}} \)$$ close to 0 indicates strong linearity and homoskedasticity, while larger values reflect increasing structural deviation, variance instability, or the presence of outliers.
 
 ---
 
@@ -82,7 +85,7 @@ Rather than directly measuring correlation or variance independently, NLDD evalu
 - Variability in residual distribution  
 - Irregular deviations induced by outliers  
 
-The dispersion is quantified using the standard deviation of dependent differences and subsequently normalized to ensure comparability across datasets.
+The dispersion is quantified using the standard deviation of dependent differences and subsequently normalized using the response range $$\((\max(y) - \min(y))\)$$ to ensure comparability across datasets.
 
 This formulation unifies error magnitude (MAE), dispersion (MAD), and variance behavior into a single diagnostic measure, enabling NLDD to function as a **comprehensive indicator of regression validity** rather than a single-purpose statistic.
 
