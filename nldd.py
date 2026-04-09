@@ -1,9 +1,9 @@
 import csv
 import os
 import numpy as np
+import math
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
-from matplotlib.patches import Rectangle
 from scipy.stats import pearsonr, spearmanr, kendalltau, chi2, f
 import statsmodels.api as sm
 from statsmodels.stats.diagnostic import (
@@ -42,6 +42,10 @@ OUTLIER_DATASETS = [
     'outlier',
 ]
 
+NLDD_DATASETS = [
+    'linear_positive',
+]
+
 # Put true outlier indices here only for datasets used in outlier experiments
 TRUE_OUTLIERS_MAP = {
     'outlier': [10, 11, 22, 23, 27, 29, 33, 41, 45, 47]
@@ -69,7 +73,7 @@ class NLDD:
         iqr_factor=1.5,
         lof_neighbour=5,
         lof_contamination=0.1,
-        nldd_outlier_k=2.0
+        nldd_outlier_k=0.05
     ):
         """
         mode:
@@ -132,7 +136,7 @@ class NLDD:
 
         if self.mode == 'linearity':
             self.compute_linearity_metrics()
-            self.compute_nldd()
+            self.compute_nldd(self.x, self.y)
             self.plot_graph_linearity(
                 x=self.x,
                 y=self.y,
@@ -146,7 +150,7 @@ class NLDD:
 
         elif self.mode == 'hetero':
             self.compute_hetero_metrics()
-            self.compute_nldd()
+            self.compute_nldd(self.x, self.y)
             self.plot_graph_hetero(
                 x=self.x,
                 y=self.y,
@@ -158,7 +162,6 @@ class NLDD:
             )
 
         elif self.mode == 'outlier':
-            self.compute_nldd()
             self.compute_outlier_methods()
 
             self.plot_graph_outlier("Z-Score", self.z_outliers, f"{self.filename}_ZScore_vs_GT")
@@ -171,8 +174,12 @@ class NLDD:
             self.print_eval("LOF", self.lof_outliers)
             self.print_eval("NLDD", self.nldd_outliers)
 
+        elif self.mode == 'nldd_alone':
+            self.compute_nldd(self.x, self.y)
+            print(f"NLDD for {self.filename}: {self.nldd_result:.4f}")
+
         else:
-            raise ValueError("mode must be either 'linearity', 'hetero', or 'outlier'")
+            raise ValueError("mode must be either 'linearity', 'hetero', 'outlier', or 'nldd_alone'")
 
     # =====================================================
     # DATA LOADING
@@ -368,36 +375,75 @@ class NLDD:
         labels = lof.fit_predict(X)
         return {i for i, lab in enumerate(labels) if lab == -1}
 
-    def detect_outliers_nldd(self, k=2.0):
+    def detect_outliers_nldd_iterative(self, threshold):
         """
-        NLDD-based point outliers:
-        flag points with |residual| > k * std(|residual|)
+        Iterative NLDD outlier extraction merged from the uploaded outlier NLDD file.
+        Outliers are tracked by original row index.
         """
-        if self.abs_residuals is None or self.abs_residual_std is None:
-            self.compute_nldd()
+        x_current = np.asarray(self.x, dtype=np.float64).copy()
+        y_current = np.asarray(self.y, dtype=np.float64).copy()
+        current_indices = np.arange(len(x_current))
+        detected = []
 
-        threshold = k * self.abs_residual_std
-        return {i for i, r in enumerate(self.abs_residuals) if r > threshold}
+        iteration = 0
+
+        while True:
+            if len(x_current) < 3:
+                break
+
+            if np.unique(x_current).size <= 1:
+                break
+
+            self.compute_nldd(x_current, y_current)
+
+            if self.nldd_result <= threshold:
+                break
+
+            if self.abs_residual_std == 0:
+                break
+
+            y_lambda = math.floor(np.max(self.abs_residuals) / self.abs_residual_std)
+            if y_lambda <= 0:
+                break
+
+            buffer_value = y_lambda * self.abs_residual_std
+            local_mask = self.abs_residuals > buffer_value
+            local_outlier_positions = np.where(local_mask)[0]
+
+            if len(local_outlier_positions) == 0:
+                break
+
+            original_outlier_indices = current_indices[local_outlier_positions]
+            detected.extend(original_outlier_indices.tolist())
+
+            keep_mask = ~local_mask
+            x_current = x_current[keep_mask]
+            y_current = y_current[keep_mask]
+            current_indices = current_indices[keep_mask]
+
+            iteration += 1
+
+        return set(sorted(detected))
 
     # =====================================================
     # NLDD
     # =====================================================
 
-    def compute_nldd(self, eps=1e-12):
+    def compute_nldd(self, x_list, y_list, eps=1e-12):
         """
         NLDD = sample std of |y - y_hat| divided by range(y)
         """
-        self.slope, self.intercept = self.least_square_method(self.x, self.y)
-        self.y_hat = self.slope * self.x + self.intercept
+        self.slope, self.intercept = self.least_square_method(x_list, y_list)
+        self.y_hat = self.slope * x_list + self.intercept
 
-        self.abs_residuals = np.abs(self.y - self.y_hat)
+        self.abs_residuals = np.abs(y_list - self.y_hat)
         self.abs_residual_mean = np.mean(self.abs_residuals)
 
         if len(self.abs_residuals) < 2:
             raise ValueError("At least 2 samples are needed for sample standard deviation.")
 
         self.abs_residual_std = np.std(self.abs_residuals, ddof=1)
-        self.y_range = np.max(self.y) - np.min(self.y)
+        self.y_range = np.max(y_list) - np.min(y_list)
 
         if self.y_range <= eps:
             raise ValueError("Range of y is zero; NLDD is undefined.")
@@ -444,7 +490,7 @@ class NLDD:
             n_neighbors=self.lof_neighbour,
             contamination=self.lof_contamination
         )
-        self.nldd_outliers = self.detect_outliers_nldd(self.nldd_outlier_k)
+        self.nldd_outliers = self.detect_outliers_nldd_iterative(self.nldd_outlier_k)
 
     # =====================================================
     # VISUALIZATION
@@ -694,13 +740,22 @@ def run_outlier_group():
             iqr_factor=1.5,
             lof_neighbour=5,
             lof_contamination=0.1,
-            nldd_outlier_k=2.0
+            nldd_outlier_k=0.05
         )
+        obj.main()
+        print("-" * 50)
+
+def run_nldd_alone():
+    print("\n========== NLDD DATASETS ==========")
+    for filename in NLDD_DATASETS:
+        print(f"Running NLDD analysis for: {filename}")
+        obj = NLDD(filename=filename, mode='nldd_alone')  # mode can be anything since we only call compute_nldd()
         obj.main()
         print("-" * 50)
 
 
 if __name__ == '__main__':
-    #run_linearity_group()
-    run_hetero_group()
-    #run_outlier_group()
+    # run_linearity_group()
+    # run_hetero_group()
+    # run_outlier_group()
+    run_nldd_alone()
