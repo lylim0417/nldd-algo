@@ -14,31 +14,60 @@ This unified perspective positions NLDD as a **comprehensive diagnostic tool** f
 
 ## Key Contributions
 
-- **Unified Diagnostic Metric**  
-  A single formulation that integrates linearity and heteroskedasticity assessment.
+- **Unified Diagnostic Framework**  
+  NLDD provides a single, coherent formulation for jointly assessing linearity, heteroskedasticity, and outlier behavior, eliminating the need for multiple independent statistical tests.
 
-- **Normalized Dependency Structure**  
-  Reduces sensitivity to scale and improves interpretability across datasets.
+- **Normalized Dependency Measure**  
+  Introduces a variance-based normalization strategy that ensures scale invariance and enables consistent interpretation across heterogeneous datasets.
 
-- **Outlier-Aware Iterative Refinement**  
-  Incorporates an iterative mechanism to mitigate the influence of extreme observations.
+- **Integrated Outlier Sensitivity Mechanism**  
+  Embeds an iterative refinement process that systematically reduces the influence of anomalous observations while preserving underlying structural patterns.
 
-- **Comparative Robustness**  
-  Demonstrates competitive or superior performance against classical correlation measures and heteroskedasticity tests.
+- **Enhanced Diagnostic Interpretability**  
+  Produces a consolidated metric that reflects both structural conformity and residual irregularities, facilitating more intuitive and reliable data analysis.
 
+- **Robustness Across Data Conditions**  
+  Demonstrates stable performance under varying relationship structures, noise distributions, and data irregularities.
+  
 ---
 
 ## Methodological Insight
 
-NLDD is based on the principle of **minimizing dependence between transformed residual structures**, normalized to ensure comparability across varying data distributions.
+NLDD is grounded in the principle of **minimizing dependence within normalized residual structures**, where both structural alignment and variance behavior are jointly evaluated.
 
-Unlike correlation-based methods that focus solely on monotonic relationships, NLDD explicitly accounts for:
+The framework operates by transforming observed relationships into a normalized space in which:
 
-- Residual variance behavior  
-- Structural deviations from linearity  
-- Distributional inconsistencies  
+- Structural deviations from linearity are explicitly quantified  
+- Variance heterogeneity is incorporated into the dependency formulation  
+- Irregular observations are iteratively down-weighted through refinement  
 
-This allows NLDD to function as a **comprehensive diagnostic tool** rather than a single-purpose statistic.
+This formulation departs from conventional correlation-based approaches by extending beyond monotonic association and explicitly integrating variance-driven characteristics of the data.
+
+As a result, NLDD captures a broader spectrum of data behavior, enabling it to function as a **comprehensive diagnostic measure** rather than a single-purpose statistic.
+
+---
+
+## Mathematical Formulation
+
+The NLDD measure can be expressed in a normalized form as:
+
+\[
+\mathrm{NLDD}(X, Y) = 1 - \frac{\mathrm{Var}\big( r(X, Y) \big)}{\mathrm{Var}(Y)}
+\]
+
+where \( r(X, Y) \) denotes the residual structure derived from the relationship between \( X \) and \( Y \). The formulation captures the degree of dependence through normalized residual variability, enabling simultaneous assessment of structural alignment and variance behavior.
+
+---
+
+## Diagnostic Scope
+
+NLDD is designed to provide a unified assessment across three key aspects of data behavior:
+
+- **Linearity** – Evaluates the degree of structural conformity between variables  
+- **Heteroskedasticity** – Captures variability patterns in residual dispersion  
+- **Outliers** – Identifies and mitigates the influence of anomalous observations  
+
+By integrating these components, NLDD offers a consolidated perspective that reduces fragmentation in traditional diagnostic workflows.
 
 ---
 
