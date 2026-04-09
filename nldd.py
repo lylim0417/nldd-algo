@@ -278,7 +278,7 @@ class NLDD:
 
     @staticmethod
     def breusch_pagan_test(model, alpha=0.05):
-        lm_stat, lm_pvalue, _, _ = het_breuschpagan(model.resid, model.model.exog)
+        lm_stat, _, _, _ = het_breuschpagan(model.resid, model.model.exog)
 
         k = model.model.exog.shape[1]
         df_bp = k - 1
@@ -520,14 +520,6 @@ class NLDD:
         fig, ax = plt.subplots(figsize=(3.5, 3.5))
         ax.scatter(x, y, s=10, color='darkblue')
 
-        '''ax.set_xlim(x.min() - 2, 122)
-        ax.set_ylim(y.min() - 2, y.max() * 1.05)
-        #ax.set_xticks([0, 30, 60, 90, 120])
-        y_max_rounded = int(np.ceil(y.max() / 10.0)) * 10
-        ax.set_xticks(np.linspace(0, x.max(), 5))
-        #ax.set_yticks(np.linspace(0, y.max(), 5))
-        ax.set_yticks(np.arange(0, y_max_rounded + 1, 10))'''
-
         ax.set_xlabel('x')
         ax.set_ylabel('y')
 
@@ -540,10 +532,6 @@ class NLDD:
             f"WLS  : {wls:.4f}\n"
             f"NLDD : {nldd:.4f}"
         )
-
-        y_offset = -0.25
-        y0 = y_offset
-        height = 0.30
 
         ax.text(
             0.5, -0.35,
@@ -577,14 +565,6 @@ class NLDD:
         fig, ax = plt.subplots(figsize=(3.5, 3.5))
         ax.scatter(x, y, s=10, color='darkblue')
 
-        '''ax.set_xlim(x.min() - 2, 122)'''
-        '''ax.set_ylim(y.min() - 2, y.max() * 1.05)'''
-        #ax.set_xticks([0, 30, 60, 90, 120])
-        '''y_max_rounded = int(np.ceil(y.max() / 10.0)) * 10
-        ax.set_xticks(np.linspace(0, x.max(), 5))
-        #ax.set_yticks(np.linspace(0, y.max(), 5))
-        ax.set_yticks(np.arange(0, y_max_rounded + 1, 20))'''
-
         ax.set_xlabel('x')
         ax.set_ylabel('y')
 
@@ -596,20 +576,6 @@ class NLDD:
             f"GQT  : {gqt}\n"
             f"NLDD : {nldd:.4f}"
         )
-
-        y_offset = -0.42
-        y0 = y_offset
-        height = 0.3
-
-        '''rect = Rectangle(
-            (0.0, -0.5), 1.0, 0.35,
-            transform=ax.transAxes,
-            facecolor='white',
-            edgecolor='black',
-            linewidth=1,
-            clip_on=False
-        )
-        ax.add_patch(rect)'''
 
         ax.text(
             0.5, -0.4,
