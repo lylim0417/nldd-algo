@@ -97,7 +97,7 @@ IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILIT
 
 For commercial use, please contact:
 
-**[kmyap@sunway.edu.my]**
+**kmyap@sunway.edu.my**
 
 A separate commercial license may be granted under negotiated terms.
 
