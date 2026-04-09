@@ -2,90 +2,89 @@
 
 ## Overview
 
-This repository provides an implementation of the **Normalized Least Dependent Difference (NLDD)**, a novel statistical framework designed to **jointly assess linearity, heteroskedasticity, and outlier behavior** within a unified formulation.
+This repository provides an implementation of the **Normalized Least Dependent Difference (NLDD)**, a statistical framework designed to **jointly assess linearity, heteroskedasticity, and outlier behavior** within a unified formulation.
 
-Traditional approaches typically evaluate these properties independently, requiring multiple statistical tools to diagnose structural relationships, variance patterns, and anomalous observations. In contrast, NLDD introduces a **normalized variance-based dependency measure** that captures structural conformity, residual dispersion, and deviation irregularities simultaneously.
+NLDD operates by quantifying the **dependent difference** between observed and predicted values derived from a fitted linear regression model. By analyzing the dispersion of these differences, the method captures both structural conformity and variance stability of the data.
 
-By integrating these aspects into a single metric, NLDD enables a more **holistic and interpretable assessment of data behavior**, reducing methodological fragmentation and improving diagnostic consistency across diverse data conditions. The framework further incorporates an **iterative refinement mechanism** to enhance robustness against outliers and distributional inconsistencies.
+Unlike conventional approaches that separately evaluate structural relationships and variance assumptions, NLDD integrates these aspects through a **normalized dispersion measure**, enabling a holistic and interpretable assessment of data behavior. The framework further incorporates an **iterative refinement mechanism** to improve robustness against anomalous observations and progressively stabilize the regression model.
 
-This unified perspective positions NLDD as a **comprehensive diagnostic tool** for analyzing complex data relationships beyond conventional single-purpose methods.
+This unified perspective positions NLDD as a **comprehensive diagnostic tool** for evaluating regression validity under complex data conditions.
 
 ---
 
 ## Key Contributions
 
 - **Unified Diagnostic Framework**  
-  NLDD provides a single, coherent formulation for jointly assessing linearity, heteroskedasticity, and outlier behavior, eliminating the need for multiple independent statistical tests.
+  NLDD provides a single formulation for jointly evaluating linearity, heteroskedasticity, and outlier behavior based on residual-derived dependent differences.
 
-- **Normalized Dependency Measure**  
-  Introduces a variance-based normalization strategy that ensures scale invariance and enables consistent interpretation across heterogeneous datasets.
+- **Dependent Difference Formulation**  
+  Introduces a novel metric based on the absolute deviation between observed and predicted values, integrating concepts from Mean Absolute Error (MAE) and Mean Absolute Deviation (MAD).
 
-- **Integrated Outlier Sensitivity Mechanism**  
-  Embeds an iterative refinement process that systematically reduces the influence of anomalous observations while preserving underlying structural patterns.
+- **Normalized Dispersion Measure**  
+  Utilizes the standard deviation of dependent differences and scales it into a normalized range, enabling consistent interpretation across datasets.
 
-- **Enhanced Diagnostic Interpretability**  
-  Produces a consolidated metric that reflects both structural conformity and residual irregularities, facilitating more intuitive and reliable data analysis.
+- **Iterative Outlier Refinement Mechanism**  
+  Incorporates a dynamic, threshold-based process to detect and remove anomalous observations, improving regression reliability.
 
-- **Robustness Across Data Conditions**  
-  Demonstrates stable performance under varying relationship structures, noise distributions, and data irregularities.
+- **Robust Performance Across Data Conditions**  
+  Demonstrates effectiveness in identifying linearity, variance stability, and outliers under noisy, non-linear, and heteroskedastic scenarios.
   
----
-
-## Methodological Insight
-
-NLDD is grounded in the principle of **minimizing dependence within normalized residual structures**, where both structural alignment and variance behavior are jointly evaluated.
-
-The framework operates by transforming observed relationships into a normalized space in which:
-
-- Structural deviations from linearity are explicitly quantified  
-- Variance heterogeneity is incorporated into the dependency formulation  
-- Irregular observations are iteratively down-weighted through refinement  
-
-This formulation departs from conventional correlation-based approaches by extending beyond monotonic association and explicitly integrating variance-driven characteristics of the data.
-
-As a result, NLDD captures a broader spectrum of data behavior, enabling it to function as a **comprehensive diagnostic measure** rather than a single-purpose statistic.
-
 ---
 
 ## Mathematical Formulation
 
-Let the fitted linear response be defined as
+Given a dataset \(\{(x_i, y_i)\}_{i=1}^{n}\), a linear regression model is fitted:
 
 $$
-\hat{y}_i = \hat{\beta}_0 + \hat{\beta}_1 x_i,
+\hat{y}_i = \beta_0 + \beta_1 x_i
 $$
 
-with residuals
+The dependent difference is defined as:
 
 $$
-e_i = y_i - \hat{y}_i, \qquad i = 1,2,\dots,n.
+\Delta y_i = \left| y_i - \hat{y}_i \right|
 $$
 
-The Normalized Least Dependent Difference (NLDD) is defined as
+The mean dependent difference is:
 
 $$
-\mathrm{NLDD}(X,Y)
-=
-1
--
-\frac{
-\sum_{i=1}^{n} w_i \left(e_i - \bar{e}_w\right)^2
-}{
-\sum_{i=1}^{n} \left(y_i - \bar{y}\right)^2
-},
+\overline{\Delta y} = \frac{1}{n} \sum_{i=1}^{n} \Delta y_i
 $$
 
-where
+The dispersion of dependent differences is measured using:
 
 $$
-\bar{e}_w = \frac{\sum_{i=1}^{n} w_i e_i}{\sum_{i=1}^{n} w_i},
-\qquad
-\bar{y} = \frac{1}{n}\sum_{i=1}^{n} y_i,
+s = \sqrt{
+\frac{1}{n} \sum_{i=1}^{n}
+\left( \Delta y_i - \overline{\Delta y} \right)^2
+}
 $$
 
-and \(w_i\) denotes an adaptive weight used to reduce the influence of anomalous observations during iterative refinement.
+The NLDD score is defined as the normalized dispersion:
 
-This formulation evaluates the proportion of normalized residual variability remaining after fitting the structural relationship between \(X\) and \(Y\). Larger NLDD values indicate stronger structural conformity with more stable variance behavior, whereas smaller values reflect greater deviation from linearity, heteroskedasticity, or outlier contamination.
+$$
+\mathrm{NLDD}(X,Y) = \tilde{s}
+$$
+
+where \( \tilde{s} \) represents the normalized standard deviation of dependent differences scaled to the range \([0,1]\).
+
+A value of NLDD close to 0 indicates strong linearity and homoskedasticity, while larger values reflect increasing structural deviation, variance instability, or the presence of outliers.
+
+---
+
+## Methodological Insight
+
+NLDD is grounded in the analysis of **dependent differences**, defined as the absolute deviation between observed values and their corresponding predictions from a fitted linear regression model.
+
+Rather than directly measuring correlation or variance independently, NLDD evaluates the **dispersion of these dependent differences**, capturing:
+
+- Structural deviation from linearity  
+- Variability in residual distribution  
+- Irregular deviations induced by outliers  
+
+The dispersion is quantified using the standard deviation of dependent differences and subsequently normalized to ensure comparability across datasets.
+
+This formulation unifies error magnitude (MAE), dispersion (MAD), and variance behavior into a single diagnostic measure, enabling NLDD to function as a **comprehensive indicator of regression validity** rather than a single-purpose statistic.
 
 ---
 
@@ -98,6 +97,45 @@ NLDD is designed to provide a unified assessment across three key aspects of dat
 - **Outliers** – Identifies and mitigates the influence of anomalous observations  
 
 By integrating these components, NLDD offers a consolidated perspective that reduces fragmentation in traditional diagnostic workflows.
+
+---
+
+## Diagnostic Interpretation
+
+NLDD provides a unified interpretation of regression validity:
+
+- **NLDD ≈ 0** → Strong linearity and homoskedasticity  
+- **Moderate NLDD** → Mild non-linearity or variance instability  
+- **High NLDD** → Significant deviation, heteroskedasticity, or outliers  
+
+This interpretation enables direct and intuitive assessment without requiring multiple statistical tests.
+
+---
+
+## Experimental Evaluation
+
+The repository includes comparative experiments against:
+
+**Linearity Measures:**
+- Pearson Correlation Coefficient (PCC)
+- Spearman's Rank Correlation Coefficient (SRCC)
+- Kendall’s Tau Correlation Coefficient (KTCC)
+- Weighted Least Squares (WLS)
+
+**Heteroskedasticity Tests:**
+- Breusch–Pagan Test (BPT)
+- White’s Test (WT)
+- Goldfeld–Quandt Test (GQT)
+
+**Outlier Tests:**
+- Interquartile Range (IQR)
+- Local Outlier Factor (LOF)
+
+Results demonstrate that NLDD provides **consistent and interpretable diagnostics** across varying data conditions, including:
+
+- Linear vs non-linear relationships  
+- Homoskedastic vs heteroskedastic noise structures  
+- Presence of outliers  
 
 ---
 
@@ -135,33 +173,6 @@ from nldd import run_nldd_alone
 
 run_nldd_alone()
 ```
-
----
-
-## Experimental Evaluation
-
-The repository includes comparative experiments against:
-
-**Linearity Measures:**
-- Pearson Correlation Coefficient (PCC)
-- Spearman's Rank Correlation Coefficient (SRCC)
-- Kendall’s Tau Correlation Coefficient (KTCC)
-- Weighted Least Squares (WLS)
-
-**Heteroskedasticity Tests:**
-- Breusch–Pagan Test (BPT)
-- White’s Test (WT)
-- Goldfeld–Quandt Test (GQT)
-
-**Outlier Tests:**
-- Interquartile Range (IQR)
-- Local Outlier Factor (LOF)
-
-Results demonstrate that NLDD provides **consistent and interpretable diagnostics** across varying data conditions, including:
-
-- Linear vs non-linear relationships  
-- Homoskedastic vs heteroskedastic noise structures  
-- Presence of outliers  
 
 ---
 
