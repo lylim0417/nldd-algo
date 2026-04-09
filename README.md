@@ -39,6 +39,8 @@ This allows NLDD to function as a **comprehensive diagnostic tool** rather than 
 ---
 
 ## Repository Structure
+
+'''text
 nldd-algo/
 │── nldd.py # Core NLDD implementation
 │── dataset/ # Synthetic and benchmark datasets
@@ -49,6 +51,7 @@ nldd-algo/
 │── README.md # Project documentation
 │── LICENSE # Non-commercial license
 └── requirements.txt
+'''
 
 ---
 
@@ -58,13 +61,17 @@ nldd-algo/
 git clone https://github.com/lylim0417/nldd-algo.git
 cd nldd-algo
 pip install -r requirements.txt
+'''
 
 ---
 
 ## Usage
+
+```bash
 from nldd import run_nldd_alone
 
 run_nldd_alone()
+'''
 
 ---
 
