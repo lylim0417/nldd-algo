@@ -40,18 +40,18 @@ This allows NLDD to function as a **comprehensive diagnostic tool** rather than 
 
 ## Repository Structure
 
-'''text
+```text
 nldd-algo/
-│── nldd.py # Core NLDD implementation
-│── dataset/ # Synthetic and benchmark datasets
-│── result_graph/ # Plotting, result, and save visualization
-│   ├── linearity/  # Comparison graphs for PCC, SRCC, KTCC, WLS, and NLDD to assess linearity
-│   ├── hetero/    # Comparison graphs for WT, BPT, GQT, and NLDD to assess heteroskedasticity
-│   └── outlier/  # Comparison graphs for IQR, LOF, and NLDD against ground truth (GT) to assess outlier
-│── README.md # Project documentation
-│── LICENSE # Non-commercial license
+├── nldd.py              # Core NLDD implementation
+├── dataset/             # Synthetic and benchmark datasets
+├── result_graph/        # Plotting, results, and visualization
+│   ├── linearity/       # PCC, SRCC, KTCC, WLS, NLDD comparisons
+│   ├── hetero/          # WT, BPT, GQT, NLDD comparisons
+│   └── outlier/         # IQR, LOF, NLDD vs ground truth (GT)
+├── README.md            # Project documentation
+├── LICENSE              # Non-commercial license
 └── requirements.txt
-'''
+```
 
 ---
 
@@ -61,7 +61,7 @@ nldd-algo/
 git clone https://github.com/lylim0417/nldd-algo.git
 cd nldd-algo
 pip install -r requirements.txt
-'''
+```
 
 ---
 
@@ -71,7 +71,7 @@ pip install -r requirements.txt
 from nldd import run_nldd_alone
 
 run_nldd_alone()
-'''
+```
 
 ---
 
