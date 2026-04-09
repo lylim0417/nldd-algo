@@ -49,13 +49,43 @@ As a result, NLDD captures a broader spectrum of data behavior, enabling it to f
 
 ## Mathematical Formulation
 
-The NLDD measure can be expressed in a normalized form as:
+Let the fitted linear response be defined as
 
-\[
-\mathrm{NLDD}(X, Y) = 1 - \frac{\mathrm{Var}\big( r(X, Y) \big)}{\mathrm{Var}(Y)}
-\]
+$$
+\hat{y}_i = \hat{\beta}_0 + \hat{\beta}_1 x_i,
+$$
 
-where \( r(X, Y) \) denotes the residual structure derived from the relationship between \( X \) and \( Y \). The formulation captures the degree of dependence through normalized residual variability, enabling simultaneous assessment of structural alignment and variance behavior.
+with residuals
+
+$$
+e_i = y_i - \hat{y}_i, \qquad i = 1,2,\dots,n.
+$$
+
+The Normalized Least Dependent Difference (NLDD) is defined as
+
+$$
+\mathrm{NLDD}(X,Y)
+=
+1
+-
+\frac{
+\sum_{i=1}^{n} w_i \left(e_i - \bar{e}_w\right)^2
+}{
+\sum_{i=1}^{n} \left(y_i - \bar{y}\right)^2
+},
+$$
+
+where
+
+$$
+\bar{e}_w = \frac{\sum_{i=1}^{n} w_i e_i}{\sum_{i=1}^{n} w_i},
+\qquad
+\bar{y} = \frac{1}{n}\sum_{i=1}^{n} y_i,
+$$
+
+and \(w_i\) denotes an adaptive weight used to reduce the influence of anomalous observations during iterative refinement.
+
+This formulation evaluates the proportion of normalized residual variability remaining after fitting the structural relationship between \(X\) and \(Y\). Larger NLDD values indicate stronger structural conformity with more stable variance behavior, whereas smaller values reflect greater deviation from linearity, heteroskedasticity, or outlier contamination.
 
 ---
 
@@ -82,7 +112,7 @@ nldd-algo/
 │   ├── hetero/          # WT, BPT, GQT, NLDD comparisons
 │   └── outlier/         # IQR, LOF, NLDD vs ground truth (GT)
 ├── README.md            # Project documentation
-├── LICENSE              # Non-commercial license
+├── LICENSE.md           # Non-commercial license
 └── requirements.txt
 ```
 
