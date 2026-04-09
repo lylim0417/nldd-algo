@@ -131,6 +131,7 @@ The repository includes comparative experiments against:
 - Goldfeld–Quandt Test (GQT)
 
 **Outlier Tests:**
+- Z-Score
 - Interquartile Range (IQR)
 - Local Outlier Factor (LOF)
 
