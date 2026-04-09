@@ -52,13 +52,15 @@ All users must:
 
 **Citation:**
 
-> “@misc{nldd2026,\n
-  title        = {Normalized Least Dependent Difference (NLDD)},\n
-  author       = {Herrick Han Lin Yeap, Le Ying Lim, Brandon Chen Hong Chow, Kok Seng Eu, Zhengying Ho, Kian Meng Yap},\n
-  year         = {2026},\n
-  howpublished = {\url{https://github.com/lylim0417/nldd-algo}},\n
-  note         = {Accessed: YYYY-MM-DD}\n
-}”
+```bibtex
+@misc{nldd2026,
+  title        = {Normalized Least Dependent Difference (NLDD)},
+  author       = {Herrick Han Lin Yeap and Le Ying Lim and Brandon Chen Hong Chow and Kok Seng Eu and Zhengying Ho and Kian Meng Yap},
+  year         = {2026},
+  howpublished = {\url{https://github.com/lylim0417/nldd-algo}},
+  note         = {Accessed: YYYY-MM-DD}
+}
+```
 
 ---
 
