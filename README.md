@@ -2,9 +2,13 @@
 
 ## Overview
 
-This repository provides an implementation of the **Normalized Least Dependent Difference (NLDD)**, a novel statistical framework designed to **jointly assess linearity and homoskedasticity** within a unified formulation.
+This repository provides an implementation of the **Normalized Least Dependent Difference (NLDD)**, a novel statistical framework designed to **jointly assess linearity, heteroskedasticity, and outlier behavior** within a unified formulation.
 
-Conventional approaches typically evaluate these properties separately—using correlation coefficients (e.g., Pearson, Spearman, Kendall) for linearity, and statistical tests (e.g., Breusch–Pagan, White, Goldfeld–Quandt) for heteroskedasticity. In contrast, NLDD introduces a **normalized variance-based dependency measure** that captures both structural conformity and residual dispersion simultaneously.
+Traditional approaches typically evaluate these properties independently, requiring multiple statistical tools to diagnose structural relationships, variance patterns, and anomalous observations. In contrast, NLDD introduces a **normalized variance-based dependency measure** that captures structural conformity, residual dispersion, and deviation irregularities simultaneously.
+
+By integrating these aspects into a single metric, NLDD enables a more **holistic and interpretable assessment of data behavior**, reducing methodological fragmentation and improving diagnostic consistency across diverse data conditions. The framework further incorporates an **iterative refinement mechanism** to enhance robustness against outliers and distributional inconsistencies.
+
+This unified perspective positions NLDD as a **comprehensive diagnostic tool** for analyzing complex data relationships beyond conventional single-purpose methods.
 
 ---
 
