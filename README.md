@@ -117,7 +117,9 @@ This interpretation enables direct and intuitive assessment without requiring mu
 
 ## Experimental Evaluation
 
-The repository includes comparative experiments against:
+The repository includes both **synthetic datasets** and an **applied real-world case study**. The synthetic datasets are used for controlled evaluation of linearity, heteroskedasticity, and outlier behavior, with each synthetic dataset containing \(n=120\) observations. The real-world case study uses the Breast Cancer Wisconsin Diagnostic dataset for applied regression-structure assessment.
+
+The repository includes comparative experiments against the following methods:
 
 **Linearity Measures:**
 - Pearson Correlation Coefficient (PCC)
@@ -138,11 +140,12 @@ The repository includes comparative experiments against:
 - Random Sample Consensus Regression (RANSAC)
 - Theil–Sen Regression with residual-based detection
 
-Results demonstrate that NLDD provides **consistent and interpretable diagnostics** across varying data conditions, including:
+The experiments include varying data conditions, including:
 
 - Linear vs non-linear relationships  
 - Homoskedastic vs heteroskedastic noise structures  
-- Presence of outliers  
+- Presence of outliers
+- A real-world biomedical case study using the Breast Cancer Wisconsin Diagnostic dataset
 
 ---
 
@@ -153,9 +156,9 @@ nldd-algo/
 ├── nldd.py              # Core NLDD implementation
 ├── dataset/             # Synthetic and benchmark datasets
 ├── result_graph/        # Plotting, results, and visualization
-│   ├── linearity/       # PCC, SRCC, KTCC, WLS, NLDD comparisons
+│   ├── linearity/       # PCC, SRCC, KTCC, WPCC, BPC, NLDD comparisons
 │   ├── hetero/          # WT, BPT, GQT, NLDD comparisons
-│   └── outlier/         # IQR, LOF, NLDD vs ground truth (GT)
+│   └── outlier/         # IQR, LOF, RANSAC, Theil-Sen, NLDD vs ground truth (GT)
 ├── README.md            # Project documentation
 ├── LICENSE.md           # Non-commercial license
 └── requirements.txt
