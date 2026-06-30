@@ -123,7 +123,8 @@ The repository includes comparative experiments against:
 - Pearson Correlation Coefficient (PCC)
 - Spearman's Rank Correlation Coefficient (SRCC)
 - Kendall’s Tau Correlation Coefficient (KTCC)
-- Weighted Least Squares (WLS)
+- Weighted Pearson Correlation Coefficient (WPCC)
+- Blest’s Rank Correlation Coefficient (BRC)
 
 **Heteroskedasticity Tests:**
 - Breusch–Pagan Test (BPT)
@@ -134,6 +135,8 @@ The repository includes comparative experiments against:
 - Z-Score
 - Interquartile Range (IQR)
 - Local Outlier Factor (LOF)
+- Random Sample Consensus Regression (RANSAC)
+- Theil–Sen Regression with residual-based detection
 
 Results demonstrate that NLDD provides **consistent and interpretable diagnostics** across varying data conditions, including:
 
