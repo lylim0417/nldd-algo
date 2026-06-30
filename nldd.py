@@ -4,7 +4,7 @@ import numpy as np
 import math
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
-from scipy.stats import pearsonr, spearmanr, kendalltau, chi2, f
+from scipy.stats import pearsonr, spearmanr, kendalltau, chi2, f, rankdata
 import statsmodels.api as sm
 from statsmodels.stats.diagnostic import (
     het_breuschpagan,
@@ -12,6 +12,7 @@ from statsmodels.stats.diagnostic import (
     het_goldfeldquandt
 )
 from sklearn.neighbors import LocalOutlierFactor
+from sklearn.linear_model import RANSACRegressor, TheilSenRegressor
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import make_pipeline
 
@@ -19,7 +20,7 @@ from sklearn.pipeline import make_pipeline
 # CONFIGURATION
 # =========================================================
 
-# Dataset groups
+# Dataset groups used in each experimental setting
 LINEARITY_DATASETS = [
     'linear_positive',
     'linear_negative',
@@ -42,11 +43,16 @@ OUTLIER_DATASETS = [
     'outlier',
 ]
 
+REAL_WORLD_DATASETS = [
+    'breast-cancer-wisconsin-data_data',
+]
+
 NLDD_DATASETS = [
     'linear_positive',
 ]
 
-# Put true outlier indices here only for datasets used in outlier experiments
+# Ground-truth outlier indices are specified only for datasets
+# included in the outlier-detection experiment.
 TRUE_OUTLIERS_MAP = {
     'outlier': [10, 11, 22, 23, 27, 29, 33, 41, 45, 47]
 }
@@ -58,6 +64,24 @@ os.makedirs(os.path.join(OUTPUT_DIR, 'linearity'), exist_ok=True)
 os.makedirs(os.path.join(OUTPUT_DIR, 'hetero'), exist_ok=True)
 os.makedirs(os.path.join(OUTPUT_DIR, 'outlier'), exist_ok=True)
 
+# =========================================================
+# RESULT-BOX POSITIONS FOR LINEARITY PLOTS
+# =========================================================
+# Coordinates use axes fraction:
+# (0,0) = bottom-left inside axis
+# (1,1) = top-right inside axis
+
+LINEARITY_TEXT_POSITIONS = {
+    'linear_positive': (0.77, 0.25),
+    'linear_negative': (0.77, 0.75),
+    'quadratic':       (0.50, 0.25),
+    'scatter':         (0.77, 0.25),
+    'sigmoid':         (0.77, 0.25),
+    'exponential':     (0.23, 0.75),
+    'breast-cancer-wisconsin-data_data_2_4': (0.77, 0.25),
+    'breast-cancer-wisconsin-data_data_2_5': (0.77, 0.25),
+}
+
 
 # =========================================================
 # NLDD CLASS
@@ -68,49 +92,72 @@ class NLDD:
         self,
         filename,
         mode,
+        first_index=0,
+        second_index=1,
         true_outlier_indices=None,
         z_threshold=2.0,
         iqr_factor=1.5,
         lof_neighbour=5,
         lof_contamination=0.1,
+        ransac_residual_threshold=None,
+        ransac_min_samples=0.5,
+        ransac_random_state=42,
+        theilsen_mad_threshold=3.5,
+        theilsen_random_state=42,
         nldd_outlier_k=0.05
     ):
         """
-        mode:
-            - 'linearity' -> compare PCC, Spearman, Kendall tau, WLS, NLDD
-            - 'hetero'    -> compare BPT, WT, GQT, NLDD
-            - 'outlier'   -> compare Z-score, IQR, LOF, NLDD against ground truth
+        Initialize the analysis object.
+
+        Parameters
+        ----------
+        mode : str
+            Analysis mode:
+            - 'linearity'  : compare PCC, Spearman, Kendall tau, WPCC, Blest, and NLDD
+            - 'hetero'     : compare BPT, WT, GQT, and NLDD
+            - 'outlier'    : compare Z-score, IQR, LOF, and NLDD against ground truth
+            - 'nldd_alone' : compute NLDD only
         """
         self.filename = filename
         self.mode = mode
+        self.first_index = first_index
+        self.second_index = second_index
         self.csv_file = os.path.join(DATASET_DIR, f'{filename}.csv')
 
-        # Outlier config
+        # Outlier-detection settings
         self.true_outliers = set(true_outlier_indices or [])
         self.z_threshold = z_threshold
         self.iqr_factor = iqr_factor
         self.lof_neighbour = lof_neighbour
         self.lof_contamination = lof_contamination
+        self.ransac_residual_threshold = ransac_residual_threshold
+        self.ransac_min_samples = ransac_min_samples
+        self.ransac_random_state = ransac_random_state
+        self.theilsen_mad_threshold = theilsen_mad_threshold
+        self.theilsen_random_state = theilsen_random_state
         self.nldd_outlier_k = nldd_outlier_k
 
-        # raw / processed data
+        # Raw and processed data containers
         self.dataset = []
         self.float_dataset = None
         self.sorted_dataset = None
         self.x = None
         self.y = None
+        self.xlabel = 'x'
+        self.ylabel = 'y'
 
-        # line fit
+        # Linear fit and residual information
         self.slope = None
         self.intercept = None
         self.y_hat = None
         self.abs_residuals = None
 
-        # metric outputs
+        # Metric outputs
         self.pcc_result = None
         self.sr_result = None
         self.kt_result = None
-        self.wls_result = None
+        self.wpc_result = None
+        self.blest_result = None
 
         self.bpt_result = None
         self.wt_result = None
@@ -126,13 +173,15 @@ class NLDD:
         self.z_outliers = set()
         self.iqr_outliers = set()
         self.lof_outliers = set()
+        self.ransac_outliers = set()
+        self.theilsen_outliers = set()
 
     # =====================================================
-    # MAIN
+    # MAIN EXECUTION
     # =====================================================
 
     def main(self):
-        self.load_and_prepare_data()
+        self.load_and_prepare_data(first_index=self.first_index, second_index=self.second_index)
 
         if self.mode == 'linearity':
             self.compute_linearity_metrics()
@@ -143,9 +192,12 @@ class NLDD:
                 pcc=self.pcc_result,
                 sr=self.sr_result,
                 kt=self.kt_result,
-                wls=self.wls_result,
+                wpc=self.wpc_result,
+                blest=self.blest_result,
                 nldd=self.nldd_result,
-                name=self.filename
+                name=self.filename,
+                xlabel=self.xlabel,
+                ylabel=self.ylabel
             )
 
         elif self.mode == 'hetero':
@@ -158,20 +210,26 @@ class NLDD:
                 wt=self.wt_result,
                 gqt=self.gqt_result,
                 nldd=self.nldd_result,
-                name=self.filename
+                name=self.filename,
+                xlabel=self.xlabel,
+                ylabel=self.ylabel
             )
 
         elif self.mode == 'outlier':
             self.compute_outlier_methods()
 
-            self.plot_graph_outlier("Z-Score", self.z_outliers, f"{self.filename}_ZScore_vs_GT")
-            self.plot_graph_outlier("IQR", self.iqr_outliers, f"{self.filename}_IQR_vs_GT")
-            self.plot_graph_outlier("LOF", self.lof_outliers, f"{self.filename}_LOF_vs_GT")
-            self.plot_graph_outlier("NLDD", self.nldd_outliers, f"{self.filename}_NLDD_vs_GT")
+            self.plot_graph_outlier("Z-Score", self.z_outliers, f"{self.filename}_ZScore_vs_GT", xlabel=self.xlabel, ylabel=self.ylabel)
+            self.plot_graph_outlier("IQR", self.iqr_outliers, f"{self.filename}_IQR_vs_GT", xlabel=self.xlabel, ylabel=self.ylabel)
+            self.plot_graph_outlier("LOF", self.lof_outliers, f"{self.filename}_LOF_vs_GT", xlabel=self.xlabel, ylabel=self.ylabel)
+            self.plot_graph_outlier("RANSAC", self.ransac_outliers, f"{self.filename}_RANSAC_vs_GT", xlabel=self.xlabel, ylabel=self.ylabel)
+            self.plot_graph_outlier("Theil-Sen", self.theilsen_outliers, f"{self.filename}_TheilSen_vs_GT", xlabel=self.xlabel, ylabel=self.ylabel)
+            self.plot_graph_outlier("NLDD", self.nldd_outliers, f"{self.filename}_NLDD_vs_GT", xlabel=self.xlabel, ylabel=self.ylabel)
 
             self.print_eval("Z-Score", self.z_outliers)
             self.print_eval("IQR", self.iqr_outliers)
             self.print_eval("LOF", self.lof_outliers)
+            self.print_eval("RANSAC", self.ransac_outliers)
+            self.print_eval("Theil-Sen", self.theilsen_outliers)
             self.print_eval("NLDD", self.nldd_outliers)
 
         elif self.mode == 'nldd_alone':
@@ -182,14 +240,33 @@ class NLDD:
             raise ValueError("mode must be either 'linearity', 'hetero', 'outlier', or 'nldd_alone'")
 
     # =====================================================
-    # DATA LOADING
+    # DATA LOADING AND PREPROCESSING
     # =====================================================
 
-    def load_and_prepare_data(self):
+    def load_and_prepare_data(self, first_index=0, second_index=1):
         self.dataset = self.import_csv_file(self.csv_file)
-        self.float_dataset = self.get_float_two_d_list(self.dataset)
+
+        # extract only selected columns before converting to float
+        self.float_dataset = self.get_float_two_d_list(
+            self.dataset,
+            first_index,
+            second_index
+        )
+
+        if self.filename in REAL_WORLD_DATASETS:
+            # Remove rows with NaN values in the second column (y)
+            self.float_dataset = self.float_dataset[~np.isnan(self.float_dataset[:, 1])]
+            first_attr_name = self.get_csv_header(self.csv_file)[first_index]
+            second_attr_name = self.get_csv_header(self.csv_file)[second_index]
+            self.filename = f"{self.filename}_{first_index}_{second_index}"
+            self.xlabel = first_attr_name
+            self.ylabel = second_attr_name
+
+        # sort by first selected attribute
         self.sorted_dataset = self.sort_two_d_array_by_column(self.float_dataset, 0)
+
         self.x, self.y = self.separate_two_d_array_by_column(self.sorted_dataset)
+
 
     @staticmethod
     def import_csv_file(filename):
@@ -198,22 +275,43 @@ class NLDD:
             csvreader = csv.reader(csvfile)
             rows = list(csvreader)
         return rows[1:]  # remove header
+    
 
     @staticmethod
-    def get_float_two_d_list(string_two_d_list):
-        return np.array(string_two_d_list, dtype=np.float64)
+    def get_csv_header(filename):
+        with open(filename, 'r', newline='') as csvfile:
+            csvreader = csv.reader(csvfile)
+            return next(csvreader)
+
+
+    @staticmethod
+    def get_float_two_d_list(string_two_d_list, first_index, second_index):
+        selected_rows = []
+        for row in string_two_d_list:
+            try:
+                selected_rows.append([
+                    float(row[first_index]),
+                    float(row[second_index])
+                ])
+            except ValueError:
+                # skip rows with missing values like '?'
+                continue
+
+        return np.array(selected_rows, dtype=np.float64)
+    
 
     @staticmethod
     def sort_two_d_array_by_column(two_d_array, column_index):
         sort_idx = np.argsort(two_d_array[:, column_index])
         return two_d_array[sort_idx]
 
+
     @staticmethod
     def separate_two_d_array_by_column(two_d_array):
         return two_d_array[:, 0], two_d_array[:, 1]
 
     # =====================================================
-    # BASIC CORRELATIONS
+    # CORRELATION-BASED LINEARITY METRICS
     # =====================================================
 
     @staticmethod
@@ -230,16 +328,52 @@ class NLDD:
     def kendall_tau(x, y):
         corr, _ = kendalltau(x, y)
         return float(f"{corr:.4f}")
+    
+    @staticmethod
+    def blest_correlation(x, y):
+        """
+        Compute the original Blest sample coefficient (nu_n).
+
+        The coefficient is defined as
+
+            nu_n = (2n + 1)/(n - 1)
+                   - [12 / (n^2 - n)] * sum_{i=1}^n (1 - R_i/(n+1))^2 * S_i
+
+        where R_i and S_i denote the ranks of x_i and y_i, respectively.
+
+        Notes
+        -----
+        - The original Blest coefficient is asymmetric.
+        - The classical derivation assumes continuous observations.
+        - Average ranks are used here when ties are present.
+        """
+        x = np.asarray(x, dtype=np.float64)
+        y = np.asarray(y, dtype=np.float64)
+
+        n = len(x)
+        if n < 2:
+            return np.nan
+
+        R = rankdata(x, method='average')
+        S = rankdata(y, method='average')
+
+        coeff = ((2 * n + 1) / (n - 1)) - (12.0 / (n**2 - n)) * np.sum(
+            ((1.0 - R / (n + 1)) ** 2) * S
+        )
+
+        return float(f"{coeff:.4f}")
 
     # =====================================================
     # WLS-BASED CORRELATION
     # =====================================================
 
     @staticmethod
-    def weighted_least_squares_correlation(x, y, eps=1e-8):
+    def weighted_pearson_correlation(x, y, eps=1e-8):
         """
-        Residual-based weighted correlation.
-        Numerically stabilized to avoid exploding weights.
+        Compute a residual-based weighted Pearson correlation.
+
+        The weighting scheme is derived from the inverse squared OLS residuals
+        and is numerically stabilized to prevent extreme weight inflation.
         """
         X = sm.add_constant(x)
         ols = sm.OLS(y, X).fit()
@@ -248,7 +382,7 @@ class NLDD:
         # Stabilized inverse-residual-square weights
         resid_sq = np.maximum(residuals ** 2, eps)
 
-        # Optional clipping to reduce domination by a few tiny residuals
+        # Clip large weights to reduce domination by a small number of points.
         cap = np.quantile(resid_sq, 0.95)
         resid_sq = np.minimum(resid_sq, cap)
 
@@ -265,7 +399,7 @@ class NLDD:
         denom = np.sqrt(max(var_x * var_y, eps))
         corr = cov_xy / denom
         return float(f"{corr:.4f}")
-
+    
     # =====================================================
     # HETEROSKEDASTICITY TESTS
     # =====================================================
@@ -374,18 +508,78 @@ class NLDD:
         )
         labels = lof.fit_predict(X)
         return {i for i, lab in enumerate(labels) if lab == -1}
+    
+    @staticmethod
+    def detect_outliers_ransac(
+        x,
+        y,
+        residual_threshold=None,
+        min_samples=0.5,
+        random_state=42
+    ):
+        """
+        Detect outliers using RANSAC regression.
+
+        RANSAC fits a robust regression model and classifies observations
+        outside the consensus inlier set as outliers.
+        """
+        X = np.asarray(x, dtype=np.float64).reshape(-1, 1)
+        y = np.asarray(y, dtype=np.float64)
+
+        model = RANSACRegressor(
+            residual_threshold=residual_threshold,
+            min_samples=min_samples,
+            random_state=random_state
+        )
+
+        model.fit(X, y)
+
+        inlier_mask = model.inlier_mask_
+        return {i for i, is_inlier in enumerate(inlier_mask) if not is_inlier}
+    
+    @staticmethod
+    def detect_outliers_theilsen_residual(
+        x,
+        y,
+        mad_threshold=3.5,
+        random_state=42,
+        eps=1e-12
+    ):
+        """
+        Detect outliers using Theil-Sen regression with MAD-based residual thresholding.
+
+        Theil-Sen provides a robust fitted regression line. Observations with
+        large robust standardized residuals are treated as outliers.
+        """
+        X = np.asarray(x, dtype=np.float64).reshape(-1, 1)
+        y = np.asarray(y, dtype=np.float64)
+
+        model = TheilSenRegressor(random_state=random_state)
+        model.fit(X, y)
+
+        y_pred = model.predict(X)
+        residuals = y - y_pred
+
+        residual_median = np.median(residuals)
+        mad = np.median(np.abs(residuals - residual_median))
+
+        if mad <= eps:
+            return set()
+
+        robust_z = 0.6745 * (residuals - residual_median) / mad
+
+        return {i for i, z in enumerate(np.abs(robust_z)) if z > mad_threshold}
 
     def detect_outliers_nldd_iterative(self, threshold):
         """
-        Iterative NLDD outlier extraction merged from the uploaded outlier NLDD file.
-        Outliers are tracked by original row index.
+        Iteratively extract outliers using the NLDD residual structure.
+
+        Detected outliers are returned using the original row indices.
         """
         x_current = np.asarray(self.x, dtype=np.float64).copy()
         y_current = np.asarray(self.y, dtype=np.float64).copy()
         current_indices = np.arange(len(x_current))
         detected = []
-
-        iteration = 0
 
         while True:
             if len(x_current) < 3:
@@ -421,8 +615,6 @@ class NLDD:
             y_current = y_current[keep_mask]
             current_indices = current_indices[keep_mask]
 
-            iteration += 1
-
         return set(sorted(detected))
 
     # =====================================================
@@ -431,7 +623,8 @@ class NLDD:
 
     def compute_nldd(self, x_list, y_list, eps=1e-12):
         """
-        NLDD = sample std of |y - y_hat| divided by range(y)
+        Compute the NLDD score as the sample standard deviation of the
+        absolute residuals normalized by the range of y.
         """
         self.slope, self.intercept = self.least_square_method(x_list, y_list)
         self.y_hat = self.slope * x_list + self.intercept
@@ -467,14 +660,15 @@ class NLDD:
         return slope, intercept
 
     # =====================================================
-    # TASK-SPECIFIC METRICS
+    # TASK-SPECIFIC METRIC COLLECTION
     # =====================================================
 
     def compute_linearity_metrics(self):
         self.pcc_result = self.pearson_correlation(self.x, self.y)
         self.sr_result = self.spearman_rank(self.x, self.y)
         self.kt_result = self.kendall_tau(self.x, self.y)
-        self.wls_result = self.weighted_least_squares_correlation(self.x, self.y)
+        self.wpc_result = self.weighted_pearson_correlation(self.x, self.y)
+        self.blest_result = self.blest_correlation(self.x, self.y)
 
     def compute_hetero_metrics(self):
         model = self.fit_ols_model(self.x, self.y)
@@ -489,6 +683,20 @@ class NLDD:
             self.x, self.y,
             n_neighbors=self.lof_neighbour,
             contamination=self.lof_contamination
+        )
+        self.ransac_outliers = self.detect_outliers_ransac(
+            self.x,
+            self.y,
+            residual_threshold=self.ransac_residual_threshold,
+            min_samples=self.ransac_min_samples,
+            random_state=self.ransac_random_state
+        )
+
+        self.theilsen_outliers = self.detect_outliers_theilsen_residual(
+            self.x,
+            self.y,
+            mad_threshold=self.theilsen_mad_threshold,
+            random_state=self.theilsen_random_state
         )
         self.nldd_outliers = self.detect_outliers_nldd_iterative(self.nldd_outlier_k)
 
@@ -509,19 +717,18 @@ class NLDD:
         rcParams['lines.linewidth'] = 1.2
 
     @classmethod
-    def plot_graph_linearity(cls, x, y, pcc, sr, kt, wls, nldd, name):
+    def plot_graph_linearity(cls, x, y, pcc, sr, kt, wpc, blest, nldd, name, xlabel='x', ylabel='y'):
         """
-        Preserve older style:
-        - scatter only
-        - large boxed results below the axis
+        Plot the linearity dataset using the existing compact visualization style:
+        scatter points with a summary box below the axis.
         """
         cls.apply_plot_style()
 
-        fig, ax = plt.subplots(figsize=(3.5, 3.5))
+        fig, ax = plt.subplots(figsize=(3.5, 3.0))
         ax.scatter(x, y, s=10, color='darkblue')
 
-        ax.set_xlabel('x')
-        ax.set_ylabel('y')
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
 
         ax.grid(True, linestyle='--', linewidth=0.4, alpha=0.6)
 
@@ -529,12 +736,16 @@ class NLDD:
             f"PCC  : {pcc:.4f}\n"
             f"SRCC : {sr:.4f}\n"
             f"KTCC : {kt:.4f}\n"
-            f"WLS  : {wls:.4f}\n"
+            f"WPCC : {wpc:.4f}\n"
+            f"BRC  : {blest:.4f}\n"
             f"NLDD : {nldd:.4f}"
         )
 
+        # Default position if dataset name is not listed
+        text_x, text_y = LINEARITY_TEXT_POSITIONS.get(name, (0.05, 0.95))
+
         ax.text(
-            0.5, -0.35,
+            text_x, text_y,
             results_text,
             transform=ax.transAxes,
             ha='center',
@@ -550,23 +761,26 @@ class NLDD:
         )
         plt.subplots_adjust(bottom=0.35)
         plt.tight_layout()
-        plt.savefig(os.path.join(OUTPUT_DIR, 'linearity', f"{name}_linearity.png"), dpi=600, bbox_inches="tight")
+        plt.savefig(
+            os.path.join(OUTPUT_DIR, 'linearity', f"{name}_linearity.png"), 
+            dpi=600, 
+            bbox_inches="tight"
+        )
         plt.show()
 
     @classmethod
-    def plot_graph_hetero(cls, x, y, bpt, wt, gqt, nldd, name):
+    def plot_graph_hetero(cls, x, y, bpt, wt, gqt, nldd, name, xlabel='x', ylabel='y'):
         """
-        Preserve older style:
-        - scatter only
-        - boxed results below the axis
+        Plot the heteroskedasticity dataset using the existing compact
+        visualization style with a boxed results summary below the axis.
         """
         cls.apply_plot_style()
 
         fig, ax = plt.subplots(figsize=(3.5, 3.5))
         ax.scatter(x, y, s=10, color='darkblue')
 
-        ax.set_xlabel('x')
-        ax.set_ylabel('y')
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
 
         ax.grid(True, linestyle='--', linewidth=0.4, alpha=0.6)
 
@@ -593,14 +807,18 @@ class NLDD:
         )
         plt.subplots_adjust(bottom=0.4)
         plt.tight_layout()
-        plt.savefig(os.path.join(OUTPUT_DIR, 'hetero', f"{name}_hetero.png"), dpi=600, bbox_inches="tight")
+        plt.savefig(
+            os.path.join(OUTPUT_DIR, 'hetero', f"{name}_hetero.png"), 
+            dpi=600, 
+            bbox_inches="tight"
+        )
         plt.show()
 
     # =====================================================
-    # VISUALIZATION: OUTLIER
+    # VISUALIZATION: OUTLIER DETECTION
     # =====================================================
 
-    def plot_graph_outlier(self, method, detected_outliers, filename_suffix):
+    def plot_graph_outlier(self, method, detected_outliers, filename_suffix, xlabel='x', ylabel='y'):
         colors = {
             'tp': '#009624',
             'fp': '#E67E22',
@@ -635,8 +853,8 @@ class NLDD:
         y_fit = self.slope * self.x + self.intercept
         ax.plot(self.x, y_fit, linestyle='--', color='black', linewidth=1.2, label='Best Fit Line')
 
-        ax.set_xlabel("x", fontsize=10, fontname="Times New Roman")
-        ax.set_ylabel("y", fontsize=10, fontname="Times New Roman")
+        ax.set_xlabel(xlabel, fontsize=10, fontname="Times New Roman")
+        ax.set_ylabel(ylabel, fontsize=10, fontname="Times New Roman")
         ax.tick_params(axis='both', which='major', labelsize=10)
 
         for label in (ax.get_xticklabels() + ax.get_yticklabels()):
@@ -676,52 +894,63 @@ class NLDD:
 # RUNNER
 # =========================================================
 
-def run_linearity_group():
+def run_linearity_group(datasets=LINEARITY_DATASETS, first_index=0, second_index=1):
     print("\n========== LINEARITY DATASETS ==========")
-    for filename in LINEARITY_DATASETS:
+    for filename in datasets:
         print(f"Running linearity analysis for: {filename}")
-        obj = NLDD(filename=filename, mode='linearity')
+        obj = NLDD(filename=filename, mode='linearity', first_index=first_index, second_index=second_index)
         obj.main()
         print("-" * 50)
 
 
-def run_hetero_group():
+def run_hetero_group(datasets=HETERO_DATASETS, first_index=0, second_index=1):
     print("\n========== HETEROSKEDASTICITY DATASETS ==========")
-    for filename in HETERO_DATASETS:
+    for filename in datasets:
         print(f"Running heteroskedasticity analysis for: {filename}")
-        obj = NLDD(filename=filename, mode='hetero')
+        obj = NLDD(filename=filename, mode='hetero', first_index=first_index, second_index=second_index)
         obj.main()
         print("-" * 50)
 
 
-def run_outlier_group():
+def run_outlier_group(datasets=OUTLIER_DATASETS, first_index=0, second_index=1):
     print("\n========== OUTLIER DATASETS ==========")
-    for filename in OUTLIER_DATASETS:
+    for filename in datasets:
         print(f"Running outlier analysis for: {filename}")
         obj = NLDD(
             filename=filename,
             mode='outlier',
+            first_index=first_index, second_index=second_index,
             true_outlier_indices=TRUE_OUTLIERS_MAP.get(filename, []),
             z_threshold=2.0,
             iqr_factor=1.5,
             lof_neighbour=5,
             lof_contamination=0.1,
+            ransac_residual_threshold=None,
+            ransac_min_samples=0.5,
+            ransac_random_state=42,
+            theilsen_mad_threshold=3.5,
+            theilsen_random_state=42,
             nldd_outlier_k=0.05
         )
         obj.main()
         print("-" * 50)
 
-def run_nldd_alone():
+
+def run_nldd_alone(datasets=NLDD_DATASETS, first_index=0, second_index=1):
     print("\n========== NLDD DATASETS ==========")
-    for filename in NLDD_DATASETS:
+    for filename in datasets:
         print(f"Running NLDD analysis for: {filename}")
-        obj = NLDD(filename=filename, mode='nldd_alone')  # mode can be anything since we only call compute_nldd()
+        obj = NLDD(filename=filename, mode='nldd_alone', first_index=first_index, second_index=second_index)
         obj.main()
         print("-" * 50)
 
 
 if __name__ == '__main__':
     # run_linearity_group()
+    # run_linearity_group(datasets=REAL_WORLD_DATASETS, first_index=2, second_index=4)
     # run_hetero_group()
+    # run_hetero_group(datasets=REAL_WORLD_DATASETS, first_index=2, second_index=22)
     # run_outlier_group()
-    run_nldd_alone()
+    # run_outlier_group(datasets=REAL_WORLD_DATASETS, first_index=2, second_index=4)
+    # run_nldd_alone()
+    run_nldd_alone(datasets=REAL_WORLD_DATASETS, first_index=2, second_index=4)
