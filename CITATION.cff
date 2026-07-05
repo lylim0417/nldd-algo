@@ -21,6 +21,7 @@ authors:
 year: 2026
 version: "1.0.0"
 date-released: "2026-07-05"
+doi: "10.5281/zenodo.21203715"
 
 repository-code: "https://github.com/lylim0417/nldd-algo"
 url: "https://github.com/lylim0417/nldd-algo"
