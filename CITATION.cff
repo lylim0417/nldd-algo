@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+message: "If you use the Normalized Least Dependent Difference (NLDD) algorithm or this repository in your research, please cite it as below."
+
+title: "Normalized Least Dependent Difference (NLDD)"
+type: software
+
+authors:
+  - family-names: "Yeap"
+    given-names: "Herrick Han Lin"
+  - family-names: "Lim"
+    given-names: "Le Ying"
+  - family-names: "Chow"
+    given-names: "Brandon Chen Hong"
+  - family-names: "Eu"
+    given-names: "Kok Seng"
+  - family-names: "Ho"
+    given-names: "Zhengying"
+  - family-names: "Yap"
+    given-names: "Kian Meng"
+
+year: 2026
+version: "1.0.0"
+date-released: "2026-07-05"
+
+repository-code: "https://github.com/lylim0417/nldd-algo"
+url: "https://github.com/lylim0417/nldd-algo"
+
+abstract: "Normalized Least Dependent Difference (NLDD) is a statistical framework for jointly assessing linearity, heteroskedasticity, and outlier-related data behavior using normalized difference-based dependency diagnostics."
