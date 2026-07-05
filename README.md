@@ -1,5 +1,7 @@
 # Normalized Least Dependent Difference (NLDD)
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21203715.svg)](https://doi.org/10.5281/zenodo.21203715)
+
 ## Overview
 
 This repository provides an implementation of the **Normalized Least Dependent Difference (NLDD)**, a statistical framework designed to **jointly assess linearity, heteroskedasticity, and outlier behavior** within a unified formulation.
@@ -160,6 +162,7 @@ nldd-algo/
 │   ├── hetero/          # WT, BPT, GQT, NLDD comparisons
 │   └── outlier/         # IQR, LOF, RANSAC, Theil-Sen, NLDD vs ground truth (GT)
 ├── README.md            # Project documentation
+├── CITATION.cff         # Citation metadata for GitHub and Zenodo
 ├── LICENSE.md           # Non-commercial license
 └── requirements.txt
 ```
@@ -188,17 +191,23 @@ run_nldd_alone()
 
 ## Citation
 
-If you use this work in your research, please cite:
+If you use the Normalized Least Dependent Difference (NLDD) algorithm or this repository in your research, please cite the archived Zenodo release:
 
 ```bibtex
-@misc{nldd2026,
-  title        = {Normalized Least Dependent Difference (NLDD)},
-  author       = {Herrick Han Lin Yeap and Le Ying Lim and Brandon Chen Hong Chow and Kok Seng Eu and Zhengying Ho and Kian Meng Yap},
-  year         = {2026},
-  howpublished = {\url{https://github.com/lylim0417/nldd-algo}},
-  note         = {Accessed: YYYY-MM-DD}
+@software{nldd2026,
+  title     = {{Normalized Least Dependent Difference (NLDD)}},
+  author    = {Herrick Han Lin Yeap and Le Ying Lim and Brandon Chen Hong Chow and Kok Seng Eu and Zhengying Ho and Kian Meng Yap},
+  year      = {2026},
+  version   = {1.0.0},
+  publisher = {Zenodo},
+  doi       = {10.5281/zenodo.21203715},
+  url       = {https://doi.org/10.5281/zenodo.21203715}
 }
 ```
+
+The source code is available at:
+
+[https://github.com/lylim0417/nldd-algo](https://github.com/lylim0417/nldd-algo)
 
 ---
 
